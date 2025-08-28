@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Teacher Attendance & Payments</title>
+<style>
+  body { font-family: Arial, sans-serif; margin: 20px; background-color: #f9f9f9; }
+  h1 { text-align: center; color: #333; }
+  .tabs { display: flex; cursor: pointer; margin-bottom: 10px; }
+  .tab { padding: 10px 20px; background: #ddd; margin-right: 2px; border-radius: 5px 5px 0 0; }
+  .tab.active { background: #4CAF50; color: white; }
+  .tab-content { display: none; background: white; padding: 10px; border: 1px solid #ccc; border-radius: 0 5px 5px 5px; }
+  .tab-content.active { display: block; }
+  table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+  th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+  th { background-color: #4CAF50; color: white; }
+  input, button { padding: 6px; margin: 5px; }
+</style>
+</head>
+<body>
+
+<h1>Teacher Attendance & Payments Tracker</h1>
+
+<div class="tabs">
+  <div class="tab active" onclick="openTab('attendance')">Attendance</div>
+  <div class="tab" onclick="openTab('payments')">Payments</div>
+</div>
+
+<div id="attendance" class="tab-content active">
+  <h2>Attendance</h2>
+  <div>
+    <label for="classDate">Class Date:</label>
+    <input type="date" id="classDate">
+    <button onclick="addAttendance()">Add Attendance</button>
+  </div>
+  <table id="attendanceTable">
+    <thead>
+      <tr>
+        <th>Class Date</th>
+        <th>Amount Deducted</th>
+        <th>Remaining Balance</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</div>
+
+<div id="payments" class="tab-content">
+  <h2>Payments Made</h2>
+  <div>
+    <label for="paymentDate">Payment Date:</label>
+    <input type="date" id="paymentDate">
+    <label for="paymentAmount">Amount ($):</label>
+    <input type="number" id="paymentAmount" value="0">
+    <button onclick="addPayment()">Add Payment</button>
+  </div>
+  <table id="paymentTable">
+    <thead>
+      <tr>
+        <th>Payment Date</th>
+        <th>Amount Paid</th>
+        <th>Total Balance</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</div>
+
+<script>
+let balance = 0;
+const classRate = 40;
+
+// ---------- Tab Switching ----------
+function openTab(tabName) {
+  document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+  document.getElementById(tabName).classList.add('active');
+  document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+  event.target.classList.add('active');
+}
+
+// ---------- Local Storage ----------
+function saveData() {
+  const attendanceRows = Array.from(document.querySelectorAll('#attendanceTable tbody tr')).map(row => 
+    Array.from(row.cells).map(cell => cell.textContent)
+  );
+  const paymentRows = Array.from(document.querySelectorAll('#paymentTable tbody tr')).map(row =>
+    Array.from(row.cells).map(cell => cell.textContent)
+  );
+  localStorage.setItem('attendance', JSON.stringify(attendanceRows));
+  localStorage.setItem('payments', JSON.stringify(paymentRows));
+  localStorage.setItem('balance', balance);
+}
+
+function loadData() {
+  const attendanceRows = JSON.parse(localStorage.getItem('attendance') || '[]');
+  const paymentRows = JSON.parse(localStorage.getItem('payments') || '[]');
+  balance = parseFloat(localStorage.getItem('balance') || '0');
+
+  const attendanceTable = document.querySelector('#attendanceTable tbody');
+  attendanceRows.forEach(rowData => {
+    const row = attendanceTable.insertRow();
+    rowData.forEach(cell => row.insertCell().textContent = cell);
+  });
+
+  const paymentTable = document.querySelector('#paymentTable tbody');
+  paymentRows.forEach(rowData => {
+    const row = paymentTable.insertRow();
+    rowData.forEach(cell => row.insertCell().textContent = cell);
+  });
+}
+
+// ---------- Add Payment ----------
+function addPayment() {
+  const date = document.getElementById('paymentDate').value;
+  const amount = parseFloat(document.getElementById('paymentAmount').value);
+  if (!date || isNaN(amount) || amount <= 0) { alert('Enter valid payment info'); return; }
+
+  balance += amount;
+
+  const table = document.getElementById('paymentTable').getElementsByTagName('tbody')[0];
+  const row = table.insertRow();
+  row.insertCell(0).textContent = date;
+  row.insertCell(1).textContent = `$${amount.toFixed(2)}`;
+  row.insertCell(2).textContent = `$${balance.toFixed(2)}`;
+
+  document.getElementById('paymentDate').value = '';
+  document.getElementById('paymentAmount').value = 0;
+
+  saveData();
+}
+
+// ---------- Add Attendance ----------
+function addAttendance() {
+  const date = document.getElementById('classDate').value;
+  if (!date) { alert('Select a class date'); return; }
+
+  if (balance < classRate) {
+    alert('Not enough balance to cover this class. Please make a payment.');
+    return;
+  }
+
+  balance -= classRate;
+
+  const table = document.getElementById('attendanceTable').getElementsByTagName('tbody')[0];
+  const row = table.insertRow();
+  row.insertCell(0).textContent = date;
+  row.insertCell(1).textContent = `$${classRate.toFixed(2)}`;
+  row.insertCell(2).textContent = `$${balance.toFixed(2)}`;
+
+  document.getElementById('classDate').value = '';
+
+  saveData();
+}
+
+// Load saved data on page load
+window.onload = loadData;
+</script>
+
+</body>
+</html>
