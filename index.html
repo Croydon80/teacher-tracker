@@ -67,7 +67,29 @@
   </table>
 </div>
 
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js"></script>
+
 <script>
+/* ========= 🔥 Firebase Config =========
+   Replace with YOUR Firebase project config */
+const firebaseConfig = {
+  apiKey: "AIzaSyDIKWRg3PAOPygzn6P6AhSE0UC2JunuAQU",
+  authDomain: "katelynstutorattendance.firebaseapp.com",
+  projectId: "katelynstutorattendance",
+  storageBucket: "katelynstutorattendance.firebasestorage.app",
+  messagingSenderId: "797372136817",
+  appId: "1:797372136817:web:5b625bbda6520599918ad0",
+  measurementId: "G-XBKNZM086K"
+
+};
+
+// Init Firebase
+const app = firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+/* ========= App Logic ========= */
 let balance = 0;
 const classRate = 40;
 
@@ -79,59 +101,58 @@ function openTab(tabName) {
   event.target.classList.add('active');
 }
 
-// ---------- Local Storage ----------
-function saveData() {
-  const attendanceRows = Array.from(document.querySelectorAll('#attendanceTable tbody tr')).map(row => 
-    Array.from(row.cells).map(cell => cell.textContent)
-  );
-  const paymentRows = Array.from(document.querySelectorAll('#paymentTable tbody tr')).map(row =>
-    Array.from(row.cells).map(cell => cell.textContent)
-  );
-  localStorage.setItem('attendance', JSON.stringify(attendanceRows));
-  localStorage.setItem('payments', JSON.stringify(paymentRows));
-  localStorage.setItem('balance', balance);
-}
-
-function loadData() {
-  const attendanceRows = JSON.parse(localStorage.getItem('attendance') || '[]');
-  const paymentRows = JSON.parse(localStorage.getItem('payments') || '[]');
-  balance = parseFloat(localStorage.getItem('balance') || '0');
-
+// ---------- Load Data from Firestore ----------
+async function loadData() {
   const attendanceTable = document.querySelector('#attendanceTable tbody');
-  attendanceRows.forEach(rowData => {
+  const paymentTable = document.querySelector('#paymentTable tbody');
+
+  attendanceTable.innerHTML = '';
+  paymentTable.innerHTML = '';
+
+  // Load attendance
+  const attSnap = await db.collection("attendance").get();
+  attSnap.forEach(doc => {
     const row = attendanceTable.insertRow();
-    rowData.forEach(cell => row.insertCell().textContent = cell);
+    const data = doc.data();
+    row.insertCell(0).textContent = data.date;
+    row.insertCell(1).textContent = data.deducted;
+    row.insertCell(2).textContent = data.remaining;
   });
 
-  const paymentTable = document.querySelector('#paymentTable tbody');
-  paymentRows.forEach(rowData => {
+  // Load payments
+  const paySnap = await db.collection("payments").get();
+  paySnap.forEach(doc => {
     const row = paymentTable.insertRow();
-    rowData.forEach(cell => row.insertCell().textContent = cell);
+    const data = doc.data();
+    row.insertCell(0).textContent = data.date;
+    row.insertCell(1).textContent = data.amount;
+    row.insertCell(2).textContent = data.total;
+    balance = parseFloat(data.total.replace("$", "")); // Update balance
   });
 }
 
 // ---------- Add Payment ----------
-function addPayment() {
+async function addPayment() {
   const date = document.getElementById('paymentDate').value;
   const amount = parseFloat(document.getElementById('paymentAmount').value);
   if (!date || isNaN(amount) || amount <= 0) { alert('Enter valid payment info'); return; }
 
   balance += amount;
 
-  const table = document.getElementById('paymentTable').getElementsByTagName('tbody')[0];
-  const row = table.insertRow();
-  row.insertCell(0).textContent = date;
-  row.insertCell(1).textContent = `$${amount.toFixed(2)}`;
-  row.insertCell(2).textContent = `$${balance.toFixed(2)}`;
+  await db.collection("payments").add({
+    date: date,
+    amount: `$${amount.toFixed(2)}`,
+    total: `$${balance.toFixed(2)}`
+  });
 
   document.getElementById('paymentDate').value = '';
   document.getElementById('paymentAmount').value = 0;
 
-  saveData();
+  loadData();
 }
 
 // ---------- Add Attendance ----------
-function addAttendance() {
+async function addAttendance() {
   const date = document.getElementById('classDate').value;
   if (!date) { alert('Select a class date'); return; }
 
@@ -142,20 +163,19 @@ function addAttendance() {
 
   balance -= classRate;
 
-  const table = document.getElementById('attendanceTable').getElementsByTagName('tbody')[0];
-  const row = table.insertRow();
-  row.insertCell(0).textContent = date;
-  row.insertCell(1).textContent = `$${classRate.toFixed(2)}`;
-  row.insertCell(2).textContent = `$${balance.toFixed(2)}`;
+  await db.collection("attendance").add({
+    date: date,
+    deducted: `$${classRate.toFixed(2)}`,
+    remaining: `$${balance.toFixed(2)}`
+  });
 
   document.getElementById('classDate').value = '';
 
-  saveData();
+  loadData();
 }
 
 // Load saved data on page load
 window.onload = loadData;
 </script>
-
 </body>
 </html>
