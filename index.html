@@ -1,181 +1,861 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Teacher Attendance & Payments</title>
-<style>
-  body { font-family: Arial, sans-serif; margin: 20px; background-color: #f9f9f9; }
-  h1 { text-align: center; color: #333; }
-  .tabs { display: flex; cursor: pointer; margin-bottom: 10px; }
-  .tab { padding: 10px 20px; background: #ddd; margin-right: 2px; border-radius: 5px 5px 0 0; }
-  .tab.active { background: #4CAF50; color: white; }
-  .tab-content { display: none; background: white; padding: 10px; border: 1px solid #ccc; border-radius: 0 5px 5px 5px; }
-  .tab-content.active { display: block; }
-  table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-  th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
-  th { background-color: #4CAF50; color: white; }
-  input, button { padding: 6px; margin: 5px; }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Private Lesson Tracker</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(45deg, #4a90e2, #357abd);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .balance-display {
+            background: rgba(255,255,255,0.2);
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+
+        .balance-amount {
+            font-size: 2em;
+            font-weight: bold;
+        }
+
+        .firebase-status {
+            background: rgba(255,255,255,0.1);
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            font-size: 0.9em;
+        }
+
+        .firebase-status.connected {
+            background: rgba(40, 167, 69, 0.3);
+        }
+
+        .firebase-status.disconnected {
+            background: rgba(220, 53, 69, 0.3);
+        }
+
+        .tabs {
+            display: flex;
+            background: #f8f9fa;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 20px;
+            text-align: center;
+            background: #e9ecef;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+        }
+
+        .tab.active {
+            background: white;
+            color: #4a90e2;
+        }
+
+        .tab:hover {
+            background: #dee2e6;
+        }
+
+        .tab.active:hover {
+            background: white;
+        }
+
+        .tab-content {
+            padding: 30px;
+            min-height: 500px;
+        }
+
+        .setup-section {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .setup-section h3 {
+            color: #856404;
+            margin-bottom: 15px;
+        }
+
+        .config-input {
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #4a90e2;
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #4a90e2, #357abd);
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: transform 0.2s ease;
+            margin-right: 10px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn.secondary {
+            background: #6c757d;
+        }
+
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .records-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .records-table th,
+        .records-table td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .records-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .records-table tbody tr:hover {
+            background: #f8f9fa;
+        }
+
+        .delete-btn {
+            background: #dc3545;
+            color: white;
+            padding: 5px 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .delete-btn:hover {
+            background: #c82333;
+        }
+
+        .summary-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .summary-row:last-child {
+            margin-bottom: 0;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .warning {
+            color: #dc3545;
+            font-weight: bold;
+        }
+
+        .success {
+            color: #28a745;
+            font-weight: bold;
+        }
+
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+
+        @media (max-width: 768px) {
+            .tabs {
+                flex-direction: column;
+            }
+            
+            .container {
+                margin: 10px;
+            }
+            
+            .header {
+                padding: 20px;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+        }
+    </style>
 </head>
 <body>
+    <div class="container">
+        <div class="header">
+            <h1>Private Lesson Tracker</h1>
+            <p>Teacher: $40 per class</p>
+            <div class="balance-display">
+                <div>Current Balance</div>
+                <div class="balance-amount" id="currentBalance">$0.00</div>
+                <div id="balanceStatus"></div>
+            </div>
+            <div class="firebase-status" id="firebaseStatus">
+                🔧 Firebase not configured
+            </div>
+        </div>
 
-<h1>Teacher Attendance & Payments Tracker</h1>
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('setup')">Setup</div>
+            <div class="tab" onclick="switchTab('attendance')">Attendance</div>
+            <div class="tab" onclick="switchTab('payments')">Payments</div>
+            <div class="tab" onclick="switchTab('summary')">Summary</div>
+        </div>
 
-<div class="tabs">
-  <div class="tab active" onclick="openTab('attendance')">Attendance</div>
-  <div class="tab" onclick="openTab('payments')">Payments</div>
-</div>
-
-<div id="attendance" class="tab-content active">
-  <h2>Attendance</h2>
-  <div>
-    <label for="classDate">Class Date:</label>
-    <input type="date" id="classDate">
-    <button onclick="addAttendance()">Add Attendance</button>
-  </div>
-  <table id="attendanceTable">
-    <thead>
-      <tr>
-        <th>Class Date</th>
-        <th>Amount Deducted</th>
-        <th>Remaining Balance</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
-</div>
-
-<div id="payments" class="tab-content">
-  <h2>Payments Made</h2>
-  <div>
-    <label for="paymentDate">Payment Date:</label>
-    <input type="date" id="paymentDate">
-    <label for="paymentAmount">Amount ($):</label>
-    <input type="number" id="paymentAmount" value="0">
-    <button onclick="addPayment()">Add Payment</button>
-  </div>
-  <table id="paymentTable">
-    <thead>
-      <tr>
-        <th>Payment Date</th>
-        <th>Amount Paid</th>
-        <th>Total Balance</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
-</div>
-
-<!-- Firebase SDKs -->
-<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js"></script>
-
-<script>
-/* ========= 🔥 Firebase Config =========
-   Replace with YOUR Firebase project config */
-const firebaseConfig = {
-  apiKey: "AIzaSyDIKWRg3PAOPygzn6P6AhSE0UC2JunuAQU",
-  authDomain: "katelynstutorattendance.firebaseapp.com",
-  projectId: "katelynstutorattendance",
-  storageBucket: "katelynstutorattendance.firebasestorage.app",
-  messagingSenderId: "797372136817",
-  appId: "1:797372136817:web:5b625bbda6520599918ad0",
-  measurementId: "G-XBKNZM086K"
-
-};
-
-// Init Firebase
-const app = firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
-
-/* ========= App Logic ========= */
-let balance = 0;
-const classRate = 40;
-
-// ---------- Tab Switching ----------
-function openTab(tabName) {
-  document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
-  document.getElementById(tabName).classList.add('active');
-  document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
-  event.target.classList.add('active');
-}
-
-// ---------- Load Data from Firestore ----------
-async function loadData() {
-  const attendanceTable = document.querySelector('#attendanceTable tbody');
-  const paymentTable = document.querySelector('#paymentTable tbody');
-
-  attendanceTable.innerHTML = '';
-  paymentTable.innerHTML = '';
-
-  // Load attendance
-  const attSnap = await db.collection("attendance").get();
-  attSnap.forEach(doc => {
-    const row = attendanceTable.insertRow();
-    const data = doc.data();
-    row.insertCell(0).textContent = data.date;
-    row.insertCell(1).textContent = data.deducted;
-    row.insertCell(2).textContent = data.remaining;
-  });
-
-  // Load payments
-  const paySnap = await db.collection("payments").get();
-  paySnap.forEach(doc => {
-    const row = paymentTable.insertRow();
-    const data = doc.data();
-    row.insertCell(0).textContent = data.date;
-    row.insertCell(1).textContent = data.amount;
-    row.insertCell(2).textContent = data.total;
-    balance = parseFloat(data.total.replace("$", "")); // Update balance
-  });
-}
-
-// ---------- Add Payment ----------
-async function addPayment() {
-  const date = document.getElementById('paymentDate').value;
-  const amount = parseFloat(document.getElementById('paymentAmount').value);
-  if (!date || isNaN(amount) || amount <= 0) { alert('Enter valid payment info'); return; }
-
-  balance += amount;
-
-  await db.collection("payments").add({
-    date: date,
-    amount: `$${amount.toFixed(2)}`,
-    total: `$${balance.toFixed(2)}`
-  });
-
-  document.getElementById('paymentDate').value = '';
-  document.getElementById('paymentAmount').value = 0;
-
-  loadData();
-}
-
-// ---------- Add Attendance ----------
-async function addAttendance() {
-  const date = document.getElementById('classDate').value;
-  if (!date) { alert('Select a class date'); return; }
-
-  if (balance < classRate) {
-    alert('Not enough balance to cover this class. Please make a payment.');
-    return;
+        <div id="setup" class="tab-content">
+            <div class="setup-section">
+                <h3>🔧 Firebase Configuration</h3>
+                <p>To enable data sync across devices, you need to set up a Firebase project. Follow these steps:</p>
+                <ol style="margin: 15px 0; padding-left: 20px;">
+                    <li>Go to <a href="https://console.firebase.google.com" target="_blank">Firebase Console</a></li>
+                    <li>Create a new project or select existing one</li>
+                    <li>Go to Project Settings > General > Your apps</li>
+                    <li>Add a web app and copy the config object</li>
+                    <li>Enable Firestore Database in the Firebase console</li>
+                    <li>Set Firestore rules to allow read/write (for testing): 
+                        <pre style="background: #f8f9fa; padding: 10px; border-radius: 5px; margin: 10px 0;">
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if true;
+    }
   }
+}</pre>
+                    </li>
+                </ol>
+                
+                <div class="form-group">
+                    <label>API Key:</label>
+                    <input type="text" id="apiKey" class="config-input" placeholder="AIzaSyC...">
+                </div>
+                <div class="form-group">
+                    <label>Auth Domain:</label>
+                    <input type="text" id="authDomain" class="config-input" placeholder="your-project.firebaseapp.com">
+                </div>
+                <div class="form-group">
+                    <label>Project ID:</label>
+                    <input type="text" id="projectId" class="config-input" placeholder="your-project-id">
+                </div>
+                <div class="form-group">
+                    <label>Storage Bucket:</label>
+                    <input type="text" id="storageBucket" class="config-input" placeholder="your-project.appspot.com">
+                </div>
+                <div class="form-group">
+                    <label>Messaging Sender ID:</label>
+                    <input type="text" id="messagingSenderId" class="config-input" placeholder="123456789">
+                </div>
+                <div class="form-group">
+                    <label>App ID:</label>
+                    <input type="text" id="appId" class="config-input" placeholder="1:123456789:web:abcdef123456">
+                </div>
+                
+                <button class="btn" onclick="initializeFirebase()">Connect to Firebase</button>
+                <button class="btn secondary" onclick="loadSampleConfig()">Load Sample Config</button>
+            </div>
+        </div>
 
-  balance -= classRate;
+        <div id="attendance" class="tab-content hidden">
+            <h2>Record Attendance</h2>
+            <div class="form-group">
+                <label for="attendanceDate">Lesson Date:</label>
+                <input type="date" id="attendanceDate" required>
+            </div>
+            <button class="btn" onclick="recordAttendance()" id="attendanceBtn">Record Attendance (-$40)</button>
 
-  await db.collection("attendance").add({
-    date: date,
-    deducted: `$${classRate.toFixed(2)}`,
-    remaining: `$${balance.toFixed(2)}`
-  });
+            <h3 style="margin-top: 40px;">Attendance History</h3>
+            <table class="records-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Cost</th>
+                        <th>Balance After</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="attendanceHistory">
+                </tbody>
+            </table>
+        </div>
 
-  document.getElementById('classDate').value = '';
+        <div id="payments" class="tab-content hidden">
+            <h2>Record Payment</h2>
+            <div class="form-group">
+                <label for="paymentDate">Payment Date:</label>
+                <input type="date" id="paymentDate" required>
+            </div>
+            <div class="form-group">
+                <label for="paymentAmount">Payment Amount ($):</label>
+                <input type="number" id="paymentAmount" min="0" step="0.01" required>
+            </div>
+            <button class="btn" onclick="recordPayment()" id="paymentBtn">Record Payment</button>
 
-  loadData();
-}
+            <h3 style="margin-top: 40px;">Payment History</h3>
+            <table class="records-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Amount</th>
+                        <th>Balance After</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="paymentHistory">
+                </tbody>
+            </table>
+        </div>
 
-// Load saved data on page load
-window.onload = loadData;
-</script>
+        <div id="summary" class="tab-content hidden">
+            <h2>Summary & Next Payment Due</h2>
+            
+            <div class="summary-card">
+                <div class="summary-row">
+                    <span>Total Classes Attended:</span>
+                    <span id="totalClasses">0</span>
+                </div>
+                <div class="summary-row">
+                    <span>Total Amount Owed:</span>
+                    <span id="totalOwed">$0.00</span>
+                </div>
+                <div class="summary-row">
+                    <span>Total Payments Made:</span>
+                    <span id="totalPaid">$0.00</span>
+                </div>
+                <div class="summary-row">
+                    <span>Current Balance:</span>
+                    <span id="summaryBalance">$0.00</span>
+                </div>
+            </div>
+
+            <div class="summary-card">
+                <h3>Payment Recommendations</h3>
+                <div id="paymentRecommendations"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+
+    <script>
+        const CLASS_RATE = 40;
+        
+        // Firebase variables
+        let db = null;
+        let firebaseInitialized = false;
+        
+        // Local data storage
+        let attendanceRecords = [];
+        let paymentRecords = [];
+
+        // Set today's date as default
+        document.getElementById('attendanceDate').value = new Date().toISOString().split('T')[0];
+        document.getElementById('paymentDate').value = new Date().toISOString().split('T')[0];
+
+        function loadSampleConfig() {
+            // Load sample configuration for testing
+            document.getElementById('apiKey').value = 'AIzaSyC_sample_key_123456789';
+            document.getElementById('authDomain').value = 'your-project.firebaseapp.com';
+            document.getElementById('projectId').value = 'your-project-id';
+            document.getElementById('storageBucket').value = 'your-project.appspot.com';
+            document.getElementById('messagingSenderId').value = '123456789';
+            document.getElementById('appId').value = '1:123456789:web:abcdef123456';
+            
+            alert('Sample config loaded. Replace with your actual Firebase config values.');
+        }
+
+        function initializeFirebase() {
+            const config = {
+                apiKey: document.getElementById('apiKey').value.trim(),
+                authDomain: document.getElementById('authDomain').value.trim(),
+                projectId: document.getElementById('projectId').value.trim(),
+                storageBucket: document.getElementById('storageBucket').value.trim(),
+                messagingSenderId: document.getElementById('messagingSenderId').value.trim(),
+                appId: document.getElementById('appId').value.trim()
+            };
+
+            // Validate config
+            if (!config.apiKey || !config.authDomain || !config.projectId) {
+                alert('Please fill in at least API Key, Auth Domain, and Project ID');
+                return;
+            }
+
+            try {
+                firebase.initializeApp(config);
+                db = firebase.firestore();
+                firebaseInitialized = true;
+                
+                updateFirebaseStatus('connected', '✅ Connected to Firebase');
+                
+                // Save config to localStorage for future use
+                localStorage.setItem('firebaseConfig', JSON.stringify(config));
+                
+                // Load data from Firebase
+                loadDataFromFirebase();
+                
+                alert('Successfully connected to Firebase!');
+            } catch (error) {
+                console.error('Firebase initialization error:', error);
+                updateFirebaseStatus('disconnected', '❌ Failed to connect: ' + error.message);
+                alert('Failed to connect to Firebase. Please check your configuration.');
+            }
+        }
+
+        function updateFirebaseStatus(status, message) {
+            const statusEl = document.getElementById('firebaseStatus');
+            statusEl.textContent = message;
+            statusEl.className = `firebase-status ${status}`;
+        }
+
+        async function loadDataFromFirebase() {
+            if (!firebaseInitialized || !db) return;
+            
+            try {
+                setLoading(true);
+                
+                // Load attendance records
+                const attendanceSnapshot = await db.collection('attendance').orderBy('date', 'desc').get();
+                attendanceRecords = [];
+                attendanceSnapshot.forEach(doc => {
+                    attendanceRecords.push({
+                        id: doc.id,
+                        ...doc.data()
+                    });
+                });
+                
+                // Load payment records
+                const paymentsSnapshot = await db.collection('payments').orderBy('date', 'desc').get();
+                paymentRecords = [];
+                paymentsSnapshot.forEach(doc => {
+                    paymentRecords.push({
+                        id: doc.id,
+                        ...doc.data()
+                    });
+                });
+                
+                updateAllDisplays();
+                setLoading(false);
+                
+            } catch (error) {
+                console.error('Error loading data from Firebase:', error);
+                setLoading(false);
+                alert('Error loading data from Firebase: ' + error.message);
+            }
+        }
+
+        function setLoading(isLoading) {
+            const elements = ['attendanceBtn', 'paymentBtn'];
+            elements.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.disabled = isLoading;
+                }
+            });
+            
+            if (isLoading) {
+                document.body.classList.add('loading');
+            } else {
+                document.body.classList.remove('loading');
+            }
+        }
+
+        function switchTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.add('hidden');
+            });
+            
+            // Remove active class from all tabs
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show selected tab and mark as active
+            document.getElementById(tabName).classList.remove('hidden');
+            event.target.classList.add('active');
+            
+            // Update summary when switching to summary tab
+            if (tabName === 'summary') {
+                updateSummary();
+            }
+        }
+
+        function calculateBalance() {
+            const totalPaid = paymentRecords.reduce((sum, record) => sum + record.amount, 0);
+            const totalOwed = attendanceRecords.length * CLASS_RATE;
+            return totalPaid - totalOwed;
+        }
+
+        function updateBalanceDisplay() {
+            const balance = calculateBalance();
+            const balanceElement = document.getElementById('currentBalance');
+            const statusElement = document.getElementById('balanceStatus');
+            
+            balanceElement.textContent = `$${balance.toFixed(2)}`;
+            
+            if (balance < 0) {
+                balanceElement.style.color = '#dc3545';
+                statusElement.textContent = `Amount due: $${Math.abs(balance).toFixed(2)}`;
+                statusElement.className = 'warning';
+            } else if (balance > 0) {
+                balanceElement.style.color = '#28a745';
+                statusElement.textContent = `Credit balance`;
+                statusElement.className = 'success';
+            } else {
+                balanceElement.style.color = 'white';
+                statusElement.textContent = `Balanced`;
+                statusElement.className = '';
+            }
+        }
+
+        async function recordAttendance() {
+            const dateInput = document.getElementById('attendanceDate');
+            const date = dateInput.value;
+            
+            if (!date) {
+                alert('Please select a date');
+                return;
+            }
+            
+            const record = {
+                date: date,
+                cost: CLASS_RATE,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            };
+            
+            try {
+                setLoading(true);
+                
+                if (firebaseInitialized && db) {
+                    // Save to Firebase
+                    const docRef = await db.collection('attendance').add(record);
+                    record.id = docRef.id;
+                } else {
+                    // Fallback to local storage
+                    record.id = Date.now().toString();
+                }
+                
+                attendanceRecords.unshift(record);
+                updateAllDisplays();
+                setLoading(false);
+                
+                // Clear form
+                dateInput.value = new Date().toISOString().split('T')[0];
+                
+            } catch (error) {
+                console.error('Error saving attendance:', error);
+                setLoading(false);
+                alert('Error saving attendance: ' + error.message);
+            }
+        }
+
+        async function recordPayment() {
+            const dateInput = document.getElementById('paymentDate');
+            const amountInput = document.getElementById('paymentAmount');
+            const date = dateInput.value;
+            const amount = parseFloat(amountInput.value);
+            
+            if (!date || !amount || amount <= 0) {
+                alert('Please enter a valid date and amount');
+                return;
+            }
+            
+            const record = {
+                date: date,
+                amount: amount,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            };
+            
+            try {
+                setLoading(true);
+                
+                if (firebaseInitialized && db) {
+                    // Save to Firebase
+                    const docRef = await db.collection('payments').add(record);
+                    record.id = docRef.id;
+                } else {
+                    // Fallback to local storage
+                    record.id = Date.now().toString();
+                }
+                
+                paymentRecords.unshift(record);
+                updateAllDisplays();
+                setLoading(false);
+                
+                // Clear form
+                dateInput.value = new Date().toISOString().split('T')[0];
+                amountInput.value = '';
+                
+            } catch (error) {
+                console.error('Error saving payment:', error);
+                setLoading(false);
+                alert('Error saving payment: ' + error.message);
+            }
+        }
+
+        async function deleteAttendance(id) {
+            if (!confirm('Are you sure you want to delete this attendance record?')) return;
+            
+            try {
+                setLoading(true);
+                
+                if (firebaseInitialized && db) {
+                    await db.collection('attendance').doc(id).delete();
+                }
+                
+                attendanceRecords = attendanceRecords.filter(record => record.id !== id);
+                updateAllDisplays();
+                setLoading(false);
+                
+            } catch (error) {
+                console.error('Error deleting attendance:', error);
+                setLoading(false);
+                alert('Error deleting attendance: ' + error.message);
+            }
+        }
+
+        async function deletePayment(id) {
+            if (!confirm('Are you sure you want to delete this payment record?')) return;
+            
+            try {
+                setLoading(true);
+                
+                if (firebaseInitialized && db) {
+                    await db.collection('payments').doc(id).delete();
+                }
+                
+                paymentRecords = paymentRecords.filter(record => record.id !== id);
+                updateAllDisplays();
+                setLoading(false);
+                
+            } catch (error) {
+                console.error('Error deleting payment:', error);
+                setLoading(false);
+                alert('Error deleting payment: ' + error.message);
+            }
+        }
+
+        function updateAttendanceTable() {
+            const tbody = document.getElementById('attendanceHistory');
+            tbody.innerHTML = '';
+            
+            attendanceRecords.forEach(record => {
+                // Calculate balance at this point in time
+                const recordsUpToThis = attendanceRecords.concat(paymentRecords)
+                    .filter(r => new Date(r.date) <= new Date(record.date))
+                    .sort((a, b) => new Date(a.date) - new Date(b.date));
+                
+                let balanceAtTime = 0;
+                recordsUpToThis.forEach(r => {
+                    if (r.cost) {
+                        balanceAtTime -= r.cost;
+                    } else if (r.amount) {
+                        balanceAtTime += r.amount;
+                    }
+                });
+                
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${new Date(record.date).toLocaleDateString()}</td>
+                    <td>-$${record.cost.toFixed(2)}</td>
+                    <td class="${balanceAtTime < 0 ? 'warning' : balanceAtTime > 0 ? 'success' : ''}">$${balanceAtTime.toFixed(2)}</td>
+                    <td><button class="delete-btn" onclick="deleteAttendance('${record.id}')">Delete</button></td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function updatePaymentTable() {
+            const tbody = document.getElementById('paymentHistory');
+            tbody.innerHTML = '';
+            
+            paymentRecords.forEach(record => {
+                // Calculate balance at this point in time
+                const recordsUpToThis = attendanceRecords.concat(paymentRecords)
+                    .filter(r => new Date(r.date) <= new Date(record.date))
+                    .sort((a, b) => new Date(a.date) - new Date(b.date));
+                
+                let balanceAtTime = 0;
+                recordsUpToThis.forEach(r => {
+                    if (r.cost) {
+                        balanceAtTime -= r.cost;
+                    } else if (r.amount) {
+                        balanceAtTime += r.amount;
+                    }
+                });
+                
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${new Date(record.date).toLocaleDateString()}</td>
+                    <td>+$${record.amount.toFixed(2)}</td>
+                    <td class="${balanceAtTime < 0 ? 'warning' : balanceAtTime > 0 ? 'success' : ''}">$${balanceAtTime.toFixed(2)}</td>
+                    <td><button class="delete-btn" onclick="deletePayment('${record.id}')">Delete</button></td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function updateSummary() {
+            const totalClasses = attendanceRecords.length;
+            const totalOwed = totalClasses * CLASS_RATE;
+            const totalPaid = paymentRecords.reduce((sum, record) => sum + record.amount, 0);
+            const balance = totalPaid - totalOwed;
+            
+            document.getElementById('totalClasses').textContent = totalClasses;
+            document.getElementById('totalOwed').textContent = `$${totalOwed.toFixed(2)}`;
+            document.getElementById('totalPaid').textContent = `$${totalPaid.toFixed(2)}`;
+            document.getElementById('summaryBalance').textContent = `$${balance.toFixed(2)}`;
+            
+            // Payment recommendations
+            const recommendationsDiv = document.getElementById('paymentRecommendations');
+            recommendationsDiv.innerHTML = '';
+            
+            if (balance < 0) {
+                const amountDue = Math.abs(balance);
+                recommendationsDiv.innerHTML = `
+                    <div class="warning">⚠️ Payment overdue: $${amountDue.toFixed(2)}</div>
+                    <div>Recommended next payment: $${(amountDue + (CLASS_RATE * 4)).toFixed(2)} (covers debt + 4 future classes)</div>
+                `;
+            } else if (balance < (CLASS_RATE * 2)) {
+                recommendationsDiv.innerHTML = `
+                    <div>💡 Consider making a payment soon to maintain a positive balance</div>
+                    <div>Suggested payment: $${(CLASS_RATE * 4).toFixed(2)} (covers 4 classes)</div>
+                `;
+            } else {
+                const classesRemaining = Math.floor(balance / CLASS_RATE);
+                recommendationsDiv.innerHTML = `
+                    <div class="success">✅ Balance is healthy</div>
+                    <div>You have enough credit for ${classesRemaining} more classes</div>
+                `;
+            }
+        }
+
+        function updateAllDisplays() {
+            updateBalanceDisplay();
+            updateAttendanceTable();
+            updatePaymentTable();
+            updateSummary();
+        }
+
+        // Initialize on page load
+        window.onload = function() {
+            // Try to load saved Firebase config
+            const savedConfig = localStorage.getItem('firebaseConfig');
+            if (savedConfig) {
+                try {
+                    const config = JSON.parse(savedConfig);
+                    document.getElementById('apiKey').value = config.apiKey || '';
+                    document.getElementById('authDomain').value = config.authDomain || '';
+                    document.getElementById('projectId').value = config.projectId || '';
+                    document.getElementById('storageBucket').value = config.storageBucket || '';
+                    document.getElementById('messagingSenderId').value = config.messagingSenderId || '';
+                    document.getElementById('appId').value = config.appId || '';
+                    
+                    // Auto-initialize if we have a complete config
+                    if (config.apiKey && config.authDomain && config.projectId) {
+                        initializeFirebase();
+                    }
+                } catch (error) {
+                    console.log('Error loading saved config:', error);
+                }
+            }
+            
+            updateAllDisplays();
+        };
+    </script>
 </body>
 </html>
